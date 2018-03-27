@@ -107,6 +107,7 @@ sbatch << EOF
 #SBATCH --error ${logs}${file%..fastq.gz}_fastqc_.%j.err
 #SBATCH --partition=blade-b
 #SBATCH -c 4
+#SBATCH --job-name='fastqc'
 
 ${SHIFTER} << SHI
 #!/bin/bash
@@ -160,6 +161,7 @@ ids=${ids}:$(sbatch --parsable -o ${logs}HS_ST_${file::(-16)}.%j.out << EOF
 #!/bin/bash
 #SBATCH --partition=blade-b
 #SBATCH --cpus-per-task=18 
+#SBATCH --job-name='HS_ST'
 
 ${SHIFTER} << SHI
 #!/bin/bash
@@ -227,6 +229,7 @@ id=$(sbatch --parsable << EOF
 #!/bin/bash
 #SBATCH -p blade-b
 #SBATCH -o ${logs}cuffmerge.${serie}.%j.out
+#SBATCH --job-name='cffmrg'
 
 
 ${SHIFTER} << SHI
@@ -277,6 +280,7 @@ ids=${ids}:$(sbatch --parsable << EOF
 #SBATCH -p blade-b
 #SBATCH --cpus-per-task=18 
 #SBATCH -o ${logs}quant_${file::(-4)}.%j.out
+#SBATCH --job-name='cffqnt'
 
 ${SHIFTER} << SHI       
 #!/bin/bash
@@ -318,7 +322,9 @@ sbatch --parsable << EOF
 #SBATCH -p blade-b
 #SBATCH --cpus-per-task=18 
 #SBATCH -o ${logs}cuffdiff.${serie}.%j.out
-${SHIFTER} << SHI       
+#SBATCH --job-name='cffdff'
+
+${SHIFTER} << SHI
 #!/bin/bash
 source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
 

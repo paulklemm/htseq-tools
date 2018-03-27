@@ -25,30 +25,35 @@ Make sure you have edited the last section of this script - cuffdiff - before yo
 
 # Define series as SE or PE and stranded or unstranded
 
-SE_unstr=("YiTS" "YiDR" "YiIS" "ShTe")
-SE_str=("Yid1" "OeDA" "AgMi")
-PE_str=("RoSt" "HaTS" "HaIS")
-PE_uns=("XHFC")
-mix=("Yid3")
+SE_unstr=()
+SE_str=()
+PE_str=("HBR", "UHR")
+PE_uns=()
+mix=()
 
-unstr=("YiTS" "YiDR" "YiIS" "ShTe" "XHFC")
-str=("Yid1" "OeDA" "RoSt" "HaTS" "HaIS" "AgMi" )
+unstr=()
+str=("HBR", "UHR")
 #mix=("Yid3")
 
 
 # Which series do you which to work on:
 
-series="HaIS"
+series="HBR"
 
 # Reference genome
 
+# ann=/beegfs/common/genomes/caenorhabditis_elegans/89/
+# ori_GTF=${ann}original.gtf
+# hisat_index=${ann}toplevel_hisat2/index.fa
+# adapters_file=/beegfs/group_bit/home/JBoucas/documents/TruSeqAdapters.txt
+# genome=${hisat_index}
 ann=/beegfs/common/genomes/caenorhabditis_elegans/89/
-ori_GTF=${ann}original.gtf
-hisat_index=${ann}toplevel_hisat2/index.fa
+ori_GTF=/beegfs/scratch/bruening_scratch/pklemm/htseq-tools-test/genome/Homo_sapiens.GRCh38.91.gtf
+hisat_index=/beegfs/scratch/bruening_scratch/pklemm/htseq-tools-test/genome/Homo_sapiens.GRCh38.dna.primary_assembly.fa
 adapters_file=/beegfs/group_bit/home/JBoucas/documents/TruSeqAdapters.txt
 genome=${hisat_index}
 
-SHIFTER="shifter --image=mpgagebioinformatics/bioinformatics_software:v1.1.0"
+SHIFTER="/beegfs/bin/shifter/latest/bin/shifter --image=mpgagebioinformatics/bioinformatics_software:v1.1.3 bash"
 
 #############################################################################
 
@@ -90,20 +95,22 @@ function contains() {
 
 echo "Starting FASTQC"
 
-cd ${raw} 
+cd ${raw}
 for serie in $series; do
     cd ${raw}
     
     for file in $(ls *${serie}*.fastq.gz); do 
+    echo "Starting FastQC for file $file"
 sbatch << EOF
 #!/bin/bash
-#SBATCH -o ${logs}${file%..fastq.gz}.%j.out
+#SBATCH --output ${logs}${file%..fastq.gz}_fastqc_.%j.out
+#SBATCH --error ${logs}${file%..fastq.gz}_fastqc_.%j.err
+#SBATCH --partition=blade-b
 #SBATCH -c 4
-module load shifter
 
 ${SHIFTER} << SHI
 #!/bin/bash
-source ~/.bashrc
+source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
 module load fastqc
 cd ${raw}
 # FASTQC call
@@ -147,17 +154,16 @@ for serie in $series; do
             fi
         fi
 
-rm -rf ${logs}HS_ST_${file::(-16)}.*.out 
+# rm -rf ${logs}HS_ST_${file::(-16)}.*.out 
 
 ids=${ids}:$(sbatch --parsable -o ${logs}HS_ST_${file::(-16)}.%j.out << EOF
 #!/bin/bash
-#SBATCH -p blade,himem,hugemem,dontuseme
+#SBATCH --partition=blade-b
 #SBATCH --cpus-per-task=18 
-module load shifter
 
-${SHIFTER} << SHI       
+${SHIFTER} << SHI
 #!/bin/bash
-source ~/.bashrc
+source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
 cd ${raw}
 module load bowtie
 module load hisat
@@ -170,7 +176,7 @@ ${files}
 
 cd ${top}hisat_output
 module load samtools
-        
+
 # Use samtools to select mapped reads and sort them
 
 samtools view -@ 18 -bhS -F 4 ${file::(-16)}.sam | samtools sort -@ 18 -o ${file::(-16)}.bam -
@@ -194,7 +200,7 @@ EOF
 done
 
 echo "Waiting for HISAT and StringTie jobs${ids} to complete"
-srun -p blade,himem,hugemem -d afterok${ids} echo "HiSat and StringTie done. Starting cuffmerge"
+srun -p blade-b -d afterok${ids} echo "HiSat and StringTie done. Starting cuffmerge"
  
 #############################################################################
 
@@ -219,14 +225,13 @@ for serie in $series; do
     echo ${serie}
 id=$(sbatch --parsable << EOF
 #!/bin/bash
-#SABTCH -p blade,himem,hugemem,dontuseme
+#SABTCH -p blade-b
 #SBATCH -o ${logs}cuffmerge.${serie}.%j.out
 
-module load shifter
 
 ${SHIFTER} << SHI
 #!/bin/bash
-source ~/.bashrc
+source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
 cd ${top}
 
 module load cufflinks
@@ -242,7 +247,7 @@ EOF
 )
 done
 
-srun -p blade,himem,hugemem -d afterok:${id} echo "Done with cuffmerge"
+srun -p blade-b -d afterok:${id} echo "Done with cuffmerge"
 
 cd ${tmp}
 
@@ -269,14 +274,13 @@ for serie in $series; do
 rm -rf ${logs}quant_${file::(-4)}.*.out
 ids=${ids}:$(sbatch --parsable << EOF
 #!/bin/bash
-#SBATCH -p blade,himem,hugemem,dontuseme
+#SBATCH -p blade-b
 #SBATCH --cpus-per-task=18 
 #SBATCH -o ${logs}quant_${file::(-4)}.%j.out
-module load shifter
 
 ${SHIFTER} << SHI       
 #!/bin/bash
-source ~/.bashrc
+source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
 cd ${top}cuffquant_output
 mkdir ${serie}
 cd ${serie}
@@ -296,7 +300,7 @@ done
 
 
 echo "Waiting for cuffquant jobs${ids} to complete"
-srun -p blade,himem,hugemem,dontuseme -d afterok${ids} echo "Cuffquant done. Starting cuffdiff."
+srun -p blade-b -d afterok${ids} echo "Cuffquant done. Starting cuffdiff."
 
 
 #############################################################################
@@ -311,13 +315,12 @@ lib="fr-firststrand"
 rm -rf ${logs}cuffdiff.${serie}.*.out
 sbatch --parsable << EOF
 #!/bin/bash
-#SBATCH -p blade,himem,hugemem,dontuseme
+#SBATCH -p blade-b
 #SBATCH --cpus-per-task=18 
 #SBATCH -o ${logs}cuffdiff.${serie}.%j.out
-module load shifter
 ${SHIFTER} << SHI       
 #!/bin/bash
-source ~/.bashrc
+source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
 
 #!/bin/bash
 cd ${qua}${serie}

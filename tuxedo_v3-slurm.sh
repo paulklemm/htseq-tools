@@ -27,18 +27,18 @@ Make sure you have edited the last section of this script - cuffdiff - before yo
 
 SE_unstr=()
 SE_str=()
-PE_str=("HBR", "UHR")
+PE_str=("TEST")
 PE_uns=()
 mix=()
 
 unstr=()
-str=("HBR", "UHR")
+str=("TEST")
 #mix=("Yid3")
 
 
 # Which series do you which to work on:
 
-series="HBR"
+series="TEST"
 
 # Reference genome
 
@@ -49,9 +49,9 @@ series="HBR"
 # genome=${hisat_index}
 ann=/beegfs/common/genomes/caenorhabditis_elegans/89/
 ori_GTF=/beegfs/scratch/bruening_scratch/pklemm/htseq-tools-test/genome/Homo_sapiens.GRCh38.91.gtf
-hisat_index=/beegfs/scratch/bruening_scratch/pklemm/htseq-tools-test/genome/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+hisat_index=/beegfs/scratch/bruening_scratch/pklemm/htseq-tools-test/genome/Homo_sapiens.GRCh38.dna.primary_assembly
 adapters_file=/beegfs/group_bit/home/JBoucas/documents/TruSeqAdapters.txt
-genome=${hisat_index}
+genome=${hisat_index}.fa
 
 SHIFTER="/beegfs/bin/shifter/latest/bin/shifter --image=mpgagebioinformatics/bioinformatics_software:v1.1.3 bash"
 
@@ -225,7 +225,7 @@ for serie in $series; do
     echo ${serie}
 id=$(sbatch --parsable << EOF
 #!/bin/bash
-#SABTCH -p blade-b
+#SBATCH -p blade-b
 #SBATCH -o ${logs}cuffmerge.${serie}.%j.out
 
 
@@ -307,7 +307,7 @@ srun -p blade-b -d afterok${ids} echo "Cuffquant done. Starting cuffdiff."
 
 #### cuff diff >>>> one section per serie ######
 
-serie=HaIS
+serie=TEST
 mkdir -p ${top}cuffdiff_output/${serie}
 dout=$(readlink -f ${top}cuffdiff_output/${serie})
 lib="fr-firststrand"
@@ -330,11 +330,11 @@ module load cufflinks
 # Cuffdiff call
 
 cuffdiff -p 18 --library-type ${lib} \
--L N2,daf2 \
+-L HBR,UHR \
 -o ${dout} --dispersion-method per-condition \
 ${top}cuffmerge_output/${serie}/merged.gtf \
-S_160-F_HaIS-L____N2-___-____-REP_1/abundances.cxb,S_161-F_HaIS-L____N2-___-____-REP_2/abundances.cxb,S_162-F_HaIS-L____N2-___-____-REP_3/abundances.cxb \
-S_163-F_HaIS-L__daf2-___-____-REP_1/abundances.cxb,S_164-F_HaIS-L__daf2-___-____-REP_2/abundances.cxb,S_165-F_HaIS-L__daf2-___-____-REP_3/abundances.cxb
+S_001-F_TEST-L___HBR-___-____-REP_1/abundances.cxb,S_002-F_TEST-L___HBR-___-____-REP_2/abundances.cxb,S_003-F_TEST-L___HBR-___-____-REP_3/abundances.cxb \
+S_004-F_TEST-L___UHR-___-____-REP_1/abundances.cxb,S_005-F_TEST-L___UHR-___-____-REP_2/abundances.cxb,S_006-F_TEST-L___UHR-___-____-REP_3/abundances.cxb
 
 SHI
 EOF

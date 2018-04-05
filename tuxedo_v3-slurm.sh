@@ -24,34 +24,33 @@ Make sure you have edited the last section of this script - cuffdiff - before yo
 #############################################################################
 
 # Define series as SE or PE and stranded or unstranded
-
+# TODO: Set labels
 SE_unstr=()
 SE_str=()
-PE_str=("TEST")
+PE_str=("TuUp")
 PE_uns=()
 mix=()
 
 unstr=()
-str=("TEST")
+str=("TuUp")
 #mix=("Yid3")
 
 
 # Which series do you which to work on:
 
-series="TEST"
+series="TuUp"
 
 # Reference genome
 
-# ann=/beegfs/common/genomes/caenorhabditis_elegans/89/
-# ori_GTF=${ann}original.gtf
-# hisat_index=${ann}toplevel_hisat2/index.fa
-# adapters_file=/beegfs/group_bit/home/JBoucas/documents/TruSeqAdapters.txt
-# genome=${hisat_index}
-ann=/beegfs/common/genomes/caenorhabditis_elegans/89/
-ori_GTF=/beegfs/scratch/bruening_scratch/pklemm/htseq-tools-test/genome/Homo_sapiens.GRCh38.91.gtf
-hisat_index=/beegfs/scratch/bruening_scratch/pklemm/htseq-tools-test/genome/Homo_sapiens.GRCh38.dna.primary_assembly
-adapters_file=/beegfs/group_bit/home/JBoucas/documents/TruSeqAdapters.txt
+# TODO: Set annotation files
+#ann=/beegfs/common/genomes/caenorhabditis_elegans/89/
+ori_GTF=/beegfs/scratch/bruening_scratch/pklemm/htseq-tools-test/genome/Drosophila_melanogaster.BDGP6.91.gtf
+hisat_index=/beegfs/scratch/bruening_scratch/pklemm/htseq-tools-test/genome/Drosophila_melanogaster.BDGP6.dna.toplevel
+#adapters_file=/beegfs/group_bit/home/JBoucas/documents/TruSeqAdapters.txt
 genome=${hisat_index}.fa
+
+## Custom commands for the dataset
+##
 
 SHIFTER="/beegfs/bin/shifter/latest/bin/shifter --image=mpgagebioinformatics/bioinformatics_software:v1.1.3 bash"
 
@@ -311,7 +310,8 @@ srun -p blade-b -d afterok${ids} echo "Cuffquant done. Starting cuffdiff."
 
 #### cuff diff >>>> one section per serie ######
 
-serie=TEST
+# TODO: Set serie
+serie=TuUp
 mkdir -p ${top}cuffdiff_output/${serie}
 dout=$(readlink -f ${top}cuffdiff_output/${serie})
 lib="fr-firststrand"
@@ -335,12 +335,13 @@ module load cufflinks
 
 # Cuffdiff call
 
+# TODO: Set cxb files and -L labels
 cuffdiff -p 18 --library-type ${lib} \
--L HBR,UHR \
+-L C1,C2 \
 -o ${dout} --dispersion-method per-condition \
 ${top}cuffmerge_output/${serie}/merged.gtf \
-S_001-F_TEST-L___HBR-___-____-REP_1/abundances.cxb,S_002-F_TEST-L___HBR-___-____-REP_2/abundances.cxb,S_003-F_TEST-L___HBR-___-____-REP_3/abundances.cxb \
-S_004-F_TEST-L___UHR-___-____-REP_1/abundances.cxb,S_005-F_TEST-L___UHR-___-____-REP_2/abundances.cxb,S_006-F_TEST-L___UHR-___-____-REP_3/abundances.cxb
+S_001-F_TuUp-L____C1-___-____-REP_1/abundances.cxb,S_002-F_TuUp-L____C1-___-____-REP_2/abundances.cxb,S_003-F_TuUp-L____C1-___-____-REP_3/abundances.cxb, \
+S_004-F_TuUp-L____C2-___-____-REP_1/abundances.cxb,S_005-F_TuUp-L____C2-___-____-REP_2/abundances.cxb,S_006-F_TuUp-L____C2-___-____-REP_3/abundances.cxb
 
 SHI
 EOF

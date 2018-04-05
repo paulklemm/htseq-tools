@@ -1,9 +1,9 @@
 #!/bin/bash
+# Abort scrip on error
+set -e
 
 # Example usage: 
-# ./hisat_genome_index.sh --ensemblbuild 91 --species "Homo_sapiens" --genome GRCh38 --output "../genome" --logs "../slurm_logs"
-# ./hisat_genome_index.sh --genome ftp://ftp.ensembl.org/pub/release-91/fasta/drosophila_melanogaster/dna/Drosophila_melanogaster.BDGP6.dna.toplevel.fa.gz
-# ./hisat_genome_index_2.sh --genome "ftp://ftp.ensembl.org/pub/release-91/fasta/drosophila_melanogaster/dna/Drosophila_melanogaster.BDGP6.dna.toplevel.fa.gz" --output "../genome" --logs "../slurm_logs"
+# ./generate_hisat_genome_index.sh --genome "ftp://ftp.ensembl.org/pub/release-91/fasta/drosophila_melanogaster/dna/Drosophila_melanogaster.BDGP6.dna.toplevel.fa.gz" --output "../genome" --logs "../slurm_logs"
 
 # Parameter read-in from https://stackoverflow.com/a/14203146/2274058
 POSITIONAL=()
@@ -27,6 +27,13 @@ case $key in
     shift # past argument
     shift # past value
     ;;
+    -h|--help)
+    printf '\n\n  Generate hisat2 index files from a ensembl link to the GTF file.\n\n  Example call:\n    ./generate_hisat_genome_index.sh \\\n      --genome "ftp://ftp.ensembl.org/pub/release-91/fasta/drosophila_melanogaster/dna/Drosophila_melanogaster.BDGP6.dna.toplevel.fa.gz" \\\n      --output "../genome" \\\n      --logs "../slurm_logs"'
+    exit 1
+    shift # past argument
+    shift # past value
+    ;;
+    
 esac
 done
 set -- "${POSITIONAL[@]}" # restore positional parameters
@@ -58,11 +65,6 @@ echo GENOME_COMPLETE_NAME_WITHOUT_EXTENSION = "${GENOME_COMPLETE_NAME_WITHOUT_EX
 # hisat2_extract_splice_sites.py Homo_sapiens.GRCh38.91.gtf > splicesites.tsv
 # hisat2_extract_exons.py Homo_sapiens.GRCh38.91.gtf > exons.tsv
 # hisat2-build -p 32 --ss splicesites.tsv --exon exons.tsv Homo_sapiens.GRCh38.dna.primary_assembly.fa Homo_sapiens.GRCh38.dna.primary_assembly
-
-# Make Hisat Index
-# ENSEMBL_BUILD=91
-# SPECIES=Homo_sapiens
-# GENOME=GRCh38
 
 SHIFTER="/beegfs/bin/shifter/latest/bin/shifter --image=mpgagebioinformatics/bioinformatics_software:v1.1.3 bash"
 

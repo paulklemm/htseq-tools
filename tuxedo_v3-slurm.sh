@@ -44,8 +44,8 @@ series="MAFA"
 
 # TODO: Set annotation files
 #ann=/beegfs/common/genomes/caenorhabditis_elegans/89/
-ori_GTF=/beegfs/scratch/bruening_scratch/pklemm/htseq-tools-test/genome/Mus_musculus.GRCm38.92.gtf
-hisat_index=/beegfs/scratch/bruening_scratch/pklemm/htseq-tools-test/genome/Mus_musculus.GRCm38.dna.toplevel
+ori_GTF=/beegfs/scratch/bruening_scratch/pklemm/debug/2018-04-Mafalda-RiboSeq/genome/Mus_musculus.GRCm38.92.gtf
+hisat_index=/beegfs/scratch/bruening_scratch/pklemm/debug/2018-04-Mafalda-RiboSeq/genome/Mus_musculus.GRCm38.92.dna.toplevel
 #adapters_file=/beegfs/group_bit/home/JBoucas/documents/TruSeqAdapters.txt
 genome=${hisat_index}.fa
 
@@ -156,8 +156,10 @@ for serie in $series; do
 
 # rm -rf ${logs}HS_ST_${file::(-16)}.*.out 
 
-ids=${ids}:$(sbatch --parsable -o ${logs}HS_ST_${file::(-16)}.%j.out << EOF
+ids=${ids}:$(sbatch --parsable << EOF
 #!/bin/bash
+#SBATCH --output ${logs}hisat_${file::(-16)}.%j.out
+#SBATCH --error ${logs}hisat_${file::(-16)}.%j.err
 #SBATCH --partition=blade-b
 #SBATCH --cpus-per-task=18 
 #SBATCH --job-name='HS_ST'
@@ -171,27 +173,42 @@ module load hisat
 
 # HISAT call 
 
+echo "`date '+%Y-%m-%d_%H-%M-%S'` Run Hisat"
+echo "hisat2 -p 18 ${lib} --dta-cufflinks --met-file ${top}hisat_output/${file::(-16)}.stats -x ${hisat_index} -S ${top}hisat_output/${file::(-16)}.sam ${files}"
+
 hisat2 -p 18 ${lib} --dta-cufflinks --met-file ${top}hisat_output/${file::(-16)}.stats \
 -x ${hisat_index} -S ${top}hisat_output/${file::(-16)}.sam \
 ${files}
+
+echo "`date '+%Y-%m-%d_%H-%M-%S'` Hisat done"
 
 cd ${top}hisat_output
 module load samtools
 
 # Use samtools to select mapped reads and sort them
 
+echo "`date '+%Y-%m-%d_%H-%M-%S'` Start samtools"
+echo "samtools view -@ 18 -bhS -F 4 ${file::(-16)}.sam | samtools sort -@ 18 -o ${file::(-16)}.bam -"
+
 samtools view -@ 18 -bhS -F 4 ${file::(-16)}.sam | samtools sort -@ 18 -o ${file::(-16)}.bam -
 rm -rf ${file::(-16)}.sam
 mkdir -p ${top}stringtie_output/${file::(-16)}
+
+echo "`date '+%Y-%m-%d_%H-%M-%S'` samtools done"
 
 module load stringtie
 
 # StringTie call
 
+echo "`date '+%Y-%m-%d_%H-%M-%S'` Start stringtie"
+echo "stringtie ${file::(-16)}.bam -o ${top}stringtie_output/${file::(-16)}.gtf -p 18 -G ${ori_GTF} -f 0.99 -C ${top}stringtie_output/${file::(-16)}_full_cov.gtf -b ${top}stringtie_output/${file::(-16)}"
+
 stringtie ${file::(-16)}.bam -o ${top}stringtie_output/${file::(-16)}.gtf \
 -p 18 -G ${ori_GTF} -f 0.99 \
 -C ${top}stringtie_output/${file::(-16)}_full_cov.gtf \
 -b ${top}stringtie_output/${file::(-16)} 
+
+echo "`date '+%Y-%m-%d_%H-%M-%S'` stringtie done"
 
 SHI
 EOF

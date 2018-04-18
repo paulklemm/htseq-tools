@@ -191,7 +191,7 @@ echo "`date '+%Y-%m-%d_%H-%M-%S'` Start samtools"
 echo "samtools view -@ 18 -bhS -F 4 ${file::(-16)}.sam | samtools sort -@ 18 -o ${file::(-16)}.bam -"
 
 samtools view -@ 18 -bhS -F 4 ${file::(-16)}.sam | samtools sort -@ 18 -o ${file::(-16)}.bam -
-rm -rf ${file::(-16)}.sam
+# rm -rf ${file::(-16)}.sam
 mkdir -p ${top}stringtie_output/${file::(-16)}
 
 echo "`date '+%Y-%m-%d_%H-%M-%S'` samtools done"

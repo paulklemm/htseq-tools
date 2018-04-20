@@ -67,6 +67,7 @@ mkdir -p ../stringtie_output
 mkdir -p ../cuffmerge_output
 mkdir -p ../cuffdiff_output
 mkdir -p ../cuffquant_output
+mkdir -p ../cufflinks_output
 
 top=$(readlink -f ../)/
 tmp=$(readlink -f ../tmp)/
@@ -121,7 +122,7 @@ EOF
     done
 done
 
-#############################################################################
+############################################################################
 
 ids=
 
@@ -154,14 +155,14 @@ for serie in $series; do
             fi
         fi
 
-# rm -rf ${logs}HS_ST_${file::(-16)}.*.out 
+rm -rf ${logs}hisat_${file::(-16)}.*.out 
 
 ids=${ids}:$(sbatch --parsable << EOF
 #!/bin/bash
 #SBATCH --output ${logs}hisat_${file::(-16)}.%j.out
 #SBATCH --error ${logs}hisat_${file::(-16)}.%j.err
 #SBATCH --partition=blade-b
-#SBATCH --cpus-per-task=18 
+#SBATCH --cpus-per-task=14 
 #SBATCH --job-name='HS_ST'
 
 ${SHIFTER} << SHI
@@ -174,9 +175,9 @@ module load hisat
 # HISAT call 
 
 echo "`date '+%Y-%m-%d_%H-%M-%S'` Run Hisat"
-echo "hisat2 -p 18 ${lib} --dta-cufflinks --met-file ${top}hisat_output/${file::(-16)}.stats -x ${hisat_index} -S ${top}hisat_output/${file::(-16)}.sam ${files}"
+echo "hisat2 -p 14 ${lib} --dta-cufflinks --met-file ${top}hisat_output/${file::(-16)}.stats -x ${hisat_index} -S ${top}hisat_output/${file::(-16)}.sam ${files}"
 
-hisat2 -p 18 ${lib} --dta-cufflinks --met-file ${top}hisat_output/${file::(-16)}.stats \
+hisat2 -p 14 ${lib} --dta-cufflinks --met-file ${top}hisat_output/${file::(-16)}.stats \
 -x ${hisat_index} -S ${top}hisat_output/${file::(-16)}.sam \
 ${files}
 
@@ -188,9 +189,9 @@ module load samtools
 # Use samtools to select mapped reads and sort them
 
 echo "`date '+%Y-%m-%d_%H-%M-%S'` Start samtools"
-echo "samtools view -@ 18 -bhS -F 4 ${file::(-16)}.sam | samtools sort -@ 18 -o ${file::(-16)}.bam -"
+echo "samtools view -@ 14 -bhS -F 4 ${file::(-16)}.sam | samtools sort -@ 14 -o ${file::(-16)}.bam -"
 
-samtools view -@ 18 -bhS -F 4 ${file::(-16)}.sam | samtools sort -@ 18 -o ${file::(-16)}.bam -
+samtools view -@ 14 -bhS -F 4 ${file::(-16)}.sam | samtools sort -@ 14 -o ${file::(-16)}.bam -
 # rm -rf ${file::(-16)}.sam
 mkdir -p ${top}stringtie_output/${file::(-16)}
 
@@ -201,10 +202,10 @@ module load stringtie
 # StringTie call
 
 echo "`date '+%Y-%m-%d_%H-%M-%S'` Start stringtie"
-echo "stringtie ${file::(-16)}.bam -o ${top}stringtie_output/${file::(-16)}.gtf -p 18 -G ${ori_GTF} -f 0.99 -C ${top}stringtie_output/${file::(-16)}_full_cov.gtf -b ${top}stringtie_output/${file::(-16)}"
+echo "stringtie ${file::(-16)}.bam -o ${top}stringtie_output/${file::(-16)}.gtf -p 14 -G ${ori_GTF} -f 0.99 -C ${top}stringtie_output/${file::(-16)}_full_cov.gtf -b ${top}stringtie_output/${file::(-16)}"
 
 stringtie ${file::(-16)}.bam -o ${top}stringtie_output/${file::(-16)}.gtf \
--p 18 -G ${ori_GTF} -f 0.99 \
+-p 14 -G ${ori_GTF} -f 0.99 \
 -C ${top}stringtie_output/${file::(-16)}_full_cov.gtf \
 -b ${top}stringtie_output/${file::(-16)} 
 
@@ -221,6 +222,60 @@ echo "Waiting for HISAT and StringTie jobs${ids} to complete"
 srun -p blade-b -d afterok${ids} echo "HiSat and StringTie done. Starting cuffmerge"
  
 #############################################################################
+
+# Custom cufflinks call
+
+ids =
+
+for serie in $series; do
+
+    # Library settings for cuffquant
+
+    if [[ $(contains "${unstr[@]}" "$serie") == "y" ]]; then
+        lib="fr-unstranded"
+    elif [[ $(contains "${str[@]}" "$serie") == "y" ]]; then
+        lib="fr-firststrand"
+    elif [[ $(contains "${mix[@]}" "$serie") == "y" ]]; then
+        lib="fr-unstranded"
+    fi
+
+    cd ${top}hisat_output
+    for file in $(ls *${serie}*.bam); do 
+
+ids=${ids}:$(sbatch --parsable << EOF
+#!/bin/bash
+#SBATCH -p blade-b
+#SBATCH -o ${logs}cufflinks.${serie}.${file::(-4)}.%j.out
+#SBATCH -o ${logs}cufflinks.${serie}.${file::(-4)}.%j.err
+#SBATCH --cpus-per-task=18 
+#SBATCH --job-name='cfflnks'
+
+${SHIFTER} << SHI
+#!/bin/bash
+source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
+cd ${top}
+
+# Cufflinks call
+
+module load cufflinks
+
+cd ${top}hisat_output
+echo "`date '+%Y-%m-%d_%H-%M-%S'` Start cufflinks"
+
+echo "cufflinks -p 14 --library-type fr-firststrand -o cufflinks_out/${file::(-4)} -g ${ori_GTF} ${file}"
+cufflinks -p 14 --library-type fr-firststrand -o cufflinks_out/${file::(-4)} -g ${ori_GTF} ${file}
+
+echo "`date '+%Y-%m-%d_%H-%M-%S'` cufflinks done"
+
+SHI
+EOF
+)
+    done
+done
+
+srun -p blade-b -d afterok:${id} echo "Done with cufflinks"
+
+# #############################################################################
 
 
 for serie in $series; do
@@ -312,6 +367,7 @@ cuffquant -p 18 --library-type ${lib} \
 -o ${file::(-4)} \
 ${top}cuffmerge_output/${serie}/merged.gtf \
 ${top}hisat_output/${file}
+
 SHI
 EOF
 )

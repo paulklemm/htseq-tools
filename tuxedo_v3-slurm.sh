@@ -44,8 +44,8 @@ series="MAFA"
 
 # TODO: Set annotation files
 #ann=/beegfs/common/genomes/caenorhabditis_elegans/89/
-ori_GTF=/beegfs/scratch/bruening_scratch/pklemm/debug/2018-04-Mafalda-RiboSeq/genome/Mus_musculus.GRCm38.92.gtf
-hisat_index=/beegfs/scratch/bruening_scratch/pklemm/debug/2018-04-Mafalda-RiboSeq/genome/Mus_musculus.GRCm38.92.dna.toplevel
+ori_GTF=/beegfs/scratch/bruening_scratch/pklemm/2018-04-Mafalda-RiboSeq/genome/Mus_musculus.GRCm38.92.gtf
+hisat_index=/beegfs/scratch/bruening_scratch/pklemm/2018-04-Mafalda-RiboSeq/genome/Mus_musculus.GRCm38.92.dna.toplevel
 #adapters_file=/beegfs/group_bit/home/JBoucas/documents/TruSeqAdapters.txt
 genome=${hisat_index}.fa
 
@@ -223,57 +223,57 @@ srun -p blade-b -d afterok${ids} echo "HiSat and StringTie done. Starting cuffme
  
 #############################################################################
 
-# Custom cufflinks call
+# # Custom cufflinks call
 
-ids =
+# ids=
 
-for serie in $series; do
+# for serie in $series; do
 
-    # Library settings for cuffquant
+#     # Library settings for cuffquant
 
-    if [[ $(contains "${unstr[@]}" "$serie") == "y" ]]; then
-        lib="fr-unstranded"
-    elif [[ $(contains "${str[@]}" "$serie") == "y" ]]; then
-        lib="fr-firststrand"
-    elif [[ $(contains "${mix[@]}" "$serie") == "y" ]]; then
-        lib="fr-unstranded"
-    fi
+#     if [[ $(contains "${unstr[@]}" "$serie") == "y" ]]; then
+#         lib="fr-unstranded"
+#     elif [[ $(contains "${str[@]}" "$serie") == "y" ]]; then
+#         lib="fr-firststrand"
+#     elif [[ $(contains "${mix[@]}" "$serie") == "y" ]]; then
+#         lib="fr-unstranded"
+#     fi
 
-    cd ${top}hisat_output
-    for file in $(ls *${serie}*.bam); do 
+#     cd ${top}hisat_output
+#     for file in $(ls *${serie}*.bam); do 
 
-ids=${ids}:$(sbatch --parsable << EOF
-#!/bin/bash
-#SBATCH -p blade-b
-#SBATCH -o ${logs}cufflinks.${serie}.${file::(-4)}.%j.out
-#SBATCH -o ${logs}cufflinks.${serie}.${file::(-4)}.%j.err
-#SBATCH --cpus-per-task=18 
-#SBATCH --job-name='cfflnks'
+# ids=${ids}:$(sbatch --parsable << EOF
+# #!/bin/bash
+# #SBATCH -p blade-b
+# #SBATCH -o ${logs}cufflinks.${serie}.${file::(-4)}.%j.out
+# #SBATCH -o ${logs}cufflinks.${serie}.${file::(-4)}.%j.err
+# #SBATCH --cpus-per-task=18 
+# #SBATCH --job-name='cfflnks'
 
-${SHIFTER} << SHI
-#!/bin/bash
-source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
-cd ${top}
+# ${SHIFTER} << SHI
+# #!/bin/bash
+# source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
+# cd ${top}
 
-# Cufflinks call
+# # Cufflinks call
 
-module load cufflinks
+# module load cufflinks
 
-cd ${top}hisat_output
-echo "`date '+%Y-%m-%d_%H-%M-%S'` Start cufflinks"
+# cd ${top}/hisat_output
+# echo "`date '+%Y-%m-%d_%H-%M-%S'` Start cufflinks"
+# echo $(pwd)
+# echo "cufflinks -p 14 --library-type fr-firststrand -o cufflinks_output/${file::(-4)} -g ${ori_GTF} ${file}"
+# cufflinks -p 14 --library-type fr-firststrand -o cufflinks_output/${file::(-4)} -g ${ori_GTF} ${file}
 
-echo "cufflinks -p 14 --library-type fr-firststrand -o cufflinks_out/${file::(-4)} -g ${ori_GTF} ${file}"
-cufflinks -p 14 --library-type fr-firststrand -o cufflinks_out/${file::(-4)} -g ${ori_GTF} ${file}
+# echo "`date '+%Y-%m-%d_%H-%M-%S'` cufflinks done"
 
-echo "`date '+%Y-%m-%d_%H-%M-%S'` cufflinks done"
+# SHI
+# EOF
+# )
+#     done
+# done
 
-SHI
-EOF
-)
-    done
-done
-
-srun -p blade-b -d afterok:${id} echo "Done with cufflinks"
+# srun -p blade-b -d afterok:${ids} echo "Done with cufflinks"
 
 # #############################################################################
 
@@ -384,7 +384,7 @@ srun -p blade-b -d afterok${ids} echo "Cuffquant done. Starting cuffdiff."
 #### cuff diff >>>> one section per serie ######
 
 # TODO: Set serie
-serie=1C
+serie=MAFA
 mkdir -p ${top}cuffdiff_output/${serie}
 dout=$(readlink -f ${top}cuffdiff_output/${serie})
 lib="fr-firststrand"
@@ -410,296 +410,17 @@ module load cufflinks
 
 # TODO: Set cxb files and -L labels
 cuffdiff -p 18 --library-type ${lib} \
--L IN,IP \
+-L IN_Control,IN_Experiment,IP_Control,IP_Experiment \
 -o ${dout} --dispersion-method per-condition \
 ${top}cuffmerge_output/${serie}/merged.gtf \
-S_001-F_MAFA-L____IN-1C-____-REP_1/abundances.cxb \
-S_002-F_MAFA-L____IP-1C-____-REP_1/abundances.cxb
+S_001-F_MAFA-L____IN-1C-____-REP_1/abundances.cxb,S_005-F_MAFA-L____IN-2C-____-REP_1/abundances.cxb,S_007-F_MAFA-L____IN-3C-____-REP_1/abundances.cxb,S_013-F_MAFA-L____IN-4C-____-REP_1/abundances.cxb \
+S_003-F_MAFA-L____IN-1E-____-REP_1/abundances.cxb,S_009-F_MAFA-L____IN-2E-____-REP_1/abundances.cxb,S_011-F_MAFA-L____IN-3E-____-REP_1/abundances.cxb,S_015-F_MAFA-L____IN-4E-____-REP_1/abundances.cxb \
+S_002-F_MAFA-L____IP-1C-____-REP_1/abundances.cxb,S_006-F_MAFA-L____IP-2C-____-REP_1/abundances.cxb,S_008-F_MAFA-L____IP-3C-____-REP_1/abundances.cxb,S_014-F_MAFA-L____IP-4C-____-REP_1/abundances.cxb \
+S_004-F_MAFA-L____IP-1E-____-REP_1/abundances.cxb,S_010-F_MAFA-L____IP-2E-____-REP_1/abundances.cxb,S_012-F_MAFA-L____IP-3E-____-REP_1/abundances.cxb,S_016-F_MAFA-L____IP-4E-____-REP_1/abundances.cxb
 
 SHI
 EOF
 
 #### END section
-
-#### cuff diff >>>> one section per serie ######
-
-# TODO: Set serie
-serie=1E
-mkdir -p ${top}cuffdiff_output/${serie}
-dout=$(readlink -f ${top}cuffdiff_output/${serie})
-lib="fr-firststrand"
-
-rm -rf ${logs}cuffdiff.${serie}.*.out
-sbatch --parsable << EOF
-#!/bin/bash
-#SBATCH -p blade-b
-#SBATCH --cpus-per-task=18 
-#SBATCH -o ${logs}cuffdiff.${serie}.%j.out
-#SBATCH --job-name='cffdff'
-
-${SHIFTER} << SHI
-#!/bin/bash
-source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
-
-#!/bin/bash
-cd ${qua}${serie}
-
-module load cufflinks
-
-# Cuffdiff call
-
-# TODO: Set cxb files and -L labels
-cuffdiff -p 18 --library-type ${lib} \
--L IN,IP \
--o ${dout} --dispersion-method per-condition \
-${top}cuffmerge_output/${serie}/merged.gtf \
-S_003-F_MAFA-L____IN-1E-____-REP_1/abundances.cxb \
-S_004-F_MAFA-L____IP-1E-____-REP_1/abundances.cxb
-
-SHI
-EOF
-
-#### END section
-
-#### cuff diff >>>> one section per serie ######
-
-# TODO: Set serie
-serie=2C
-mkdir -p ${top}cuffdiff_output/${serie}
-dout=$(readlink -f ${top}cuffdiff_output/${serie})
-lib="fr-firststrand"
-
-rm -rf ${logs}cuffdiff.${serie}.*.out
-sbatch --parsable << EOF
-#!/bin/bash
-#SBATCH -p blade-b
-#SBATCH --cpus-per-task=18 
-#SBATCH -o ${logs}cuffdiff.${serie}.%j.out
-#SBATCH --job-name='cffdff'
-
-${SHIFTER} << SHI
-#!/bin/bash
-source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
-
-#!/bin/bash
-cd ${qua}${serie}
-
-module load cufflinks
-
-# Cuffdiff call
-
-# TODO: Set cxb files and -L labels
-cuffdiff -p 18 --library-type ${lib} \
--L IN,IP \
--o ${dout} --dispersion-method per-condition \
-${top}cuffmerge_output/${serie}/merged.gtf \
-S_005-F_MAFA-L____IN-2C-____-REP_1/abundances.cxb \
-S_006-F_MAFA-L____IP-2C-____-REP_1/abundances.cxb
-
-SHI
-EOF
-
-#### END section
-
-#### cuff diff >>>> one section per serie ######
-
-# TODO: Set serie
-serie=2E
-mkdir -p ${top}cuffdiff_output/${serie}
-dout=$(readlink -f ${top}cuffdiff_output/${serie})
-lib="fr-firststrand"
-
-rm -rf ${logs}cuffdiff.${serie}.*.out
-sbatch --parsable << EOF
-#!/bin/bash
-#SBATCH -p blade-b
-#SBATCH --cpus-per-task=18 
-#SBATCH -o ${logs}cuffdiff.${serie}.%j.out
-#SBATCH --job-name='cffdff'
-
-${SHIFTER} << SHI
-#!/bin/bash
-source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
-
-#!/bin/bash
-cd ${qua}${serie}
-
-module load cufflinks
-
-# Cuffdiff call
-
-# TODO: Set cxb files and -L labels
-cuffdiff -p 18 --library-type ${lib} \
--L IN,IP \
--o ${dout} --dispersion-method per-condition \
-${top}cuffmerge_output/${serie}/merged.gtf \
-S_007-F_MAFA-L____IN-2E-____-REP_1/abundances.cxb \
-S_008-F_MAFA-L____IP-2E-____-REP_1/abundances.cxb
-
-SHI
-EOF
-
-#### END section
-
-#### cuff diff >>>> one section per serie ######
-
-# TODO: Set serie
-serie=3C
-mkdir -p ${top}cuffdiff_output/${serie}
-dout=$(readlink -f ${top}cuffdiff_output/${serie})
-lib="fr-firststrand"
-
-rm -rf ${logs}cuffdiff.${serie}.*.out
-sbatch --parsable << EOF
-#!/bin/bash
-#SBATCH -p blade-b
-#SBATCH --cpus-per-task=18 
-#SBATCH -o ${logs}cuffdiff.${serie}.%j.out
-#SBATCH --job-name='cffdff'
-
-${SHIFTER} << SHI
-#!/bin/bash
-source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
-
-#!/bin/bash
-cd ${qua}${serie}
-
-module load cufflinks
-
-# Cuffdiff call
-
-# TODO: Set cxb files and -L labels
-cuffdiff -p 18 --library-type ${lib} \
--L IN,IP \
--o ${dout} --dispersion-method per-condition \
-${top}cuffmerge_output/${serie}/merged.gtf \
-S_009-F_MAFA-L____IN-3C-____-REP_1/abundances.cxb \
-S_010-F_MAFA-L____IP-3C-____-REP_1/abundances.cxb
-
-SHI
-EOF
-
-#### END section
-
-#### cuff diff >>>> one section per serie ######
-
-# TODO: Set serie
-serie=3E
-mkdir -p ${top}cuffdiff_output/${serie}
-dout=$(readlink -f ${top}cuffdiff_output/${serie})
-lib="fr-firststrand"
-
-rm -rf ${logs}cuffdiff.${serie}.*.out
-sbatch --parsable << EOF
-#!/bin/bash
-#SBATCH -p blade-b
-#SBATCH --cpus-per-task=18 
-#SBATCH -o ${logs}cuffdiff.${serie}.%j.out
-#SBATCH --job-name='cffdff'
-
-${SHIFTER} << SHI
-#!/bin/bash
-source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
-
-#!/bin/bash
-cd ${qua}${serie}
-
-module load cufflinks
-
-# Cuffdiff call
-
-# TODO: Set cxb files and -L labels
-cuffdiff -p 18 --library-type ${lib} \
--L IN,IP \
--o ${dout} --dispersion-method per-condition \
-${top}cuffmerge_output/${serie}/merged.gtf \
-S_011-F_MAFA-L____IN-3E-____-REP_1/abundances.cxb \
-S_012-F_MAFA-L____IP-3E-____-REP_1/abundances.cxb
-
-SHI
-EOF
-
-#### END section
-
-#### cuff diff >>>> one section per serie ######
-
-# TODO: Set serie
-serie=4C
-mkdir -p ${top}cuffdiff_output/${serie}
-dout=$(readlink -f ${top}cuffdiff_output/${serie})
-lib="fr-firststrand"
-
-rm -rf ${logs}cuffdiff.${serie}.*.out
-sbatch --parsable << EOF
-#!/bin/bash
-#SBATCH -p blade-b
-#SBATCH --cpus-per-task=18 
-#SBATCH -o ${logs}cuffdiff.${serie}.%j.out
-#SBATCH --job-name='cffdff'
-
-${SHIFTER} << SHI
-#!/bin/bash
-source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
-
-#!/bin/bash
-cd ${qua}${serie}
-
-module load cufflinks
-
-# Cuffdiff call
-
-# TODO: Set cxb files and -L labels
-cuffdiff -p 18 --library-type ${lib} \
--L IN,IP \
--o ${dout} --dispersion-method per-condition \
-${top}cuffmerge_output/${serie}/merged.gtf \
-S_013-F_MAFA-L____IN-4C-____-REP_1/abundances.cxb \
-S_014-F_MAFA-L____IP-4C-____-REP_1/abundances.cxb
-
-SHI
-EOF
-
-#### END section
-
-#### cuff diff >>>> one section per serie ######
-
-# TODO: Set serie
-serie=4E
-mkdir -p ${top}cuffdiff_output/${serie}
-dout=$(readlink -f ${top}cuffdiff_output/${serie})
-lib="fr-firststrand"
-
-rm -rf ${logs}cuffdiff.${serie}.*.out
-sbatch --parsable << EOF
-#!/bin/bash
-#SBATCH -p blade-b
-#SBATCH --cpus-per-task=18 
-#SBATCH -o ${logs}cuffdiff.${serie}.%j.out
-#SBATCH --job-name='cffdff'
-
-${SHIFTER} << SHI
-#!/bin/bash
-source /beegfs/scratch/bruening_scratch/pklemm/shifter/home/.bashrc
-
-#!/bin/bash
-cd ${qua}${serie}
-
-module load cufflinks
-
-# Cuffdiff call
-
-# TODO: Set cxb files and -L labels
-cuffdiff -p 18 --library-type ${lib} \
--L IN,IP \
--o ${dout} --dispersion-method per-condition \
-${top}cuffmerge_output/${serie}/merged.gtf \
-S_015-F_MAFA-L____IN-4E-____-REP_1/abundances.cxb \
-S_016-F_MAFA-L____IP-4E-____-REP_1/abundances.cxb
-
-SHI
-EOF
-
-#### END section
-
 
 exit
